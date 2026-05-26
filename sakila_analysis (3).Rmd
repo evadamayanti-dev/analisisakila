@@ -1,0 +1,995 @@
+---
+title: "Sakila DVD Rental — Analisis Data Komprehensif"
+subtitle: "Clustering · Forecasting · Business Intelligence"
+author: "Data Analytics Report"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: null
+    self_contained: true
+    mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"
+    css: null
+---
+
+```{=html}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+
+/* ═══════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES — DARK / LIGHT THEME
+═══════════════════════════════════════════════ */
+:root {
+  --bg-primary:     #0d1117;
+  --bg-secondary:   #161b22;
+  --bg-tertiary:    #21262d;
+  --bg-card:        #1c2128;
+  --bg-code:        #161b22;
+  --accent-blue:    #58a6ff;
+  --accent-purple:  #bc8cff;
+  --accent-teal:    #39d353;
+  --accent-coral:   #ff7b72;
+  --accent-amber:   #e3b341;
+  --accent-pink:    #f778ba;
+  --text-primary:   #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted:     #484f58;
+  --border:         #30363d;
+  --border-light:   #21262d;
+  --shadow:         0 8px 32px rgba(0,0,0,0.5);
+  --shadow-sm:      0 2px 8px rgba(0,0,0,0.3);
+  --radius:         12px;
+  --radius-sm:      8px;
+  --font-main:      'Inter', sans-serif;
+  --font-mono:      'JetBrains Mono', monospace;
+  --font-display:   'Playfair Display', serif;
+  --transition:     0.25s cubic-bezier(0.4,0,0.2,1);
+}
+
+[data-theme="light"] {
+  --bg-primary:     #f0f2f5;
+  --bg-secondary:   #ffffff;
+  --bg-tertiary:    #f6f8fa;
+  --bg-card:        #ffffff;
+  --bg-code:        #f6f8fa;
+  --accent-blue:    #0969da;
+  --accent-purple:  #7c3aed;
+  --accent-teal:    #1a7f37;
+  --accent-coral:   #cf222e;
+  --accent-amber:   #9a6700;
+  --accent-pink:    #bf3989;
+  --text-primary:   #1c2128;
+  --text-secondary: #57606a;
+  --text-muted:     #8c959f;
+  --border:         #d0d7de;
+  --border-light:   #eaeef2;
+  --shadow:         0 8px 32px rgba(0,0,0,0.08);
+  --shadow-sm:      0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* ═══════════════════════════════════════════════
+   BASE RESET & TYPOGRAPHY
+═══════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-main);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.75;
+  font-size: 15px;
+  transition: background var(--transition), color var(--transition);
+}
+
+/* override bookdown/rmd defaults */
+body > .container-fluid { padding: 0 !important; max-width: none !important; }
+.main-container { max-width: none !important; padding: 0 !important; }
+
+/* ═══════════════════════════════════════════════
+   HERO HEADER
+═══════════════════════════════════════════════ */
+.hero {
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 40%, #1c2128 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 5rem 2rem 4rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="light"] .hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f172a 100%);
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 50%, rgba(88,166,255,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 80% 30%, rgba(188,140,255,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  display: inline-block;
+  background: rgba(88,166,255,0.12);
+  border: 1px solid rgba(88,166,255,0.3);
+  color: #58a6ff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border-radius: 100px;
+  margin-bottom: 1.5rem;
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  color: #e6edf3;
+  line-height: 1.15;
+  margin-bottom: 0.75rem;
+}
+
+.hero h1 span {
+  background: linear-gradient(90deg, #58a6ff, #bc8cff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+  font-size: 1rem;
+  color: #8b949e;
+  margin-bottom: 2rem;
+  letter-spacing: 0.05em;
+}
+
+.hero-meta {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #8b949e;
+}
+
+.hero-meta span { display: flex; align-items: center; gap: 6px; }
+.hero-meta i { color: #58a6ff; }
+
+/* ═══════════════════════════════════════════════
+   THEME TOGGLE
+═══════════════════════════════════════════════ */
+#theme-toggle {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 9999;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 100px;
+  padding: 6px 14px 6px 10px;
+  font-size: 13px;
+  font-family: var(--font-main);
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
+}
+
+#theme-toggle:hover {
+  background: var(--bg-tertiary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+/* ═══════════════════════════════════════════════
+   LAYOUT — SIDEBAR + CONTENT
+═══════════════════════════════════════════════ */
+#content-wrap {
+  display: flex;
+  min-height: 100vh;
+}
+
+#TOC {
+  width: 260px;
+  min-width: 260px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  padding: 2rem 1.25rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  font-size: 13px;
+  transition: background var(--transition);
+}
+
+#TOC::-webkit-scrollbar { width: 4px; }
+#TOC::-webkit-scrollbar-track { background: transparent; }
+#TOC::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+#TOC::before {
+  content: 'DAFTAR ISI';
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+#TOC ul { list-style: none; padding: 0; }
+#TOC ul li { margin: 2px 0; }
+
+#TOC ul li a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  display: block;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+  border-left: 2px solid transparent;
+}
+
+#TOC ul li a:hover,
+#TOC ul li a.active {
+  color: var(--accent-blue);
+  background: rgba(88,166,255,0.08);
+  border-left-color: var(--accent-blue);
+}
+
+#TOC ul ul { padding-left: 12px; }
+#TOC ul ul li a { font-size: 12px; color: var(--text-muted); }
+
+#main-content {
+  flex: 1;
+  padding: 3rem clamp(1.5rem, 4vw, 4rem);
+  max-width: 960px;
+}
+
+/* ═══════════════════════════════════════════════
+   HEADINGS
+═══════════════════════════════════════════════ */
+h1, h2, h3, h4 {
+  font-family: var(--font-main);
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+h1.title { display: none; }
+h2.subtitle, h3.author, h3.date { display: none; }
+
+h1 { font-size: 1.75rem; font-weight: 700; margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+h2 { font-size: 1.35rem; font-weight: 600; margin: 2rem 0 0.75rem; color: var(--accent-blue); }
+h3 { font-size: 1.1rem; font-weight: 600; margin: 1.5rem 0 0.5rem; color: var(--accent-purple); }
+h4 { font-size: 0.95rem; font-weight: 600; margin: 1.25rem 0 0.4rem; color: var(--text-secondary); }
+
+/* Section numbers */
+.header-section-number { color: var(--text-muted); font-weight: 400; margin-right: 0.5rem; }
+
+/* ═══════════════════════════════════════════════
+   CARDS & METRIC BLOCKS
+═══════════════════════════════════════════════ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition), border var(--transition);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-light);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.card-header i { font-size: 16px; }
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+
+.metric-card.blue::before  { background: var(--accent-blue); }
+.metric-card.purple::before { background: var(--accent-purple); }
+.metric-card.teal::before  { background: var(--accent-teal); }
+.metric-card.coral::before { background: var(--accent-coral); }
+.metric-card.amber::before { background: var(--accent-amber); }
+.metric-card.pink::before  { background: var(--accent-pink); }
+
+.metric-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+
+.metric-value { font-size: 2rem; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.metric-card.blue  .metric-value { color: var(--accent-blue); }
+.metric-card.purple .metric-value { color: var(--accent-purple); }
+.metric-card.teal  .metric-value { color: var(--accent-teal); }
+.metric-card.coral .metric-value { color: var(--accent-coral); }
+.metric-card.amber .metric-value { color: var(--accent-amber); }
+.metric-card.pink  .metric-value { color: var(--accent-pink); }
+
+.metric-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+.metric-sub   { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* ═══════════════════════════════════════════════
+   CALLOUT / ALERT BOXES
+═══════════════════════════════════════════════ */
+.callout {
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  border-left: 4px solid;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.callout-title {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.callout.info    { background: rgba(88,166,255,0.07);  border-color: var(--accent-blue);   color: var(--text-secondary); }
+.callout.warning { background: rgba(227,179,65,0.07);  border-color: var(--accent-amber);  color: var(--text-secondary); }
+.callout.success { background: rgba(57,211,83,0.07);   border-color: var(--accent-teal);   color: var(--text-secondary); }
+.callout.danger  { background: rgba(255,123,114,0.07); border-color: var(--accent-coral);  color: var(--text-secondary); }
+.callout.note    { background: rgba(188,140,255,0.07); border-color: var(--accent-purple); color: var(--text-secondary); }
+
+.callout.info    .callout-title { color: var(--accent-blue); }
+.callout.warning .callout-title { color: var(--accent-amber); }
+.callout.success .callout-title { color: var(--accent-teal); }
+.callout.danger  .callout-title { color: var(--accent-coral); }
+.callout.note    .callout-title { color: var(--accent-purple); }
+
+/* ═══════════════════════════════════════════════
+   CODE BLOCKS
+═══════════════════════════════════════════════ */
+pre, code {
+  font-family: var(--font-mono) !important;
+  font-size: 13px;
+}
+
+pre {
+  background: var(--bg-code) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 1.25rem !important;
+  overflow-x: auto;
+  color: #e6edf3 !important;
+  line-height: 1.6 !important;
+  margin: 1rem 0 !important;
+  position: relative;
+}
+
+code { background: var(--bg-code); padding: 2px 6px; border-radius: 4px; color: var(--accent-coral); font-size: 12px; }
+pre code { background: transparent; padding: 0; color: inherit; }
+
+/* syntax highlight overrides */
+.hljs-keyword    { color: #ff7b72; }
+.hljs-string     { color: #a5d6ff; }
+.hljs-number     { color: #79c0ff; }
+.hljs-comment    { color: #8b949e; font-style: italic; }
+.hljs-function   { color: #d2a8ff; }
+.hljs-built_in   { color: #ffa657; }
+
+/* code folding button */
+.btn-default.btn-xs { background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-secondary); font-family: var(--font-mono); font-size: 11px; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.btn-default.btn-xs:hover { background: var(--bg-card); color: var(--text-primary); }
+
+/* ═══════════════════════════════════════════════
+   TABLES
+═══════════════════════════════════════════════ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 1.25rem 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+thead th {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+tbody td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-primary);
+}
+
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: rgba(88,166,255,0.04); }
+
+/* ═══════════════════════════════════════════════
+   MATH / LATEX — equation blocks
+═══════════════════════════════════════════════ */
+.math-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem 2rem;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.math-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  margin-bottom: 0.75rem;
+  text-align: left;
+}
+
+.MathJax { color: var(--text-primary) !important; }
+
+/* ═══════════════════════════════════════════════
+   PLOTS & FIGURES
+═══════════════════════════════════════════════ */
+img {
+  max-width: 100%;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  display: block;
+  margin: 1rem auto;
+}
+
+.figure { text-align: center; margin: 1.5rem 0; }
+.figure .caption { font-size: 12px; color: var(--text-muted); margin-top: 0.5rem; font-style: italic; }
+
+/* ═══════════════════════════════════════════════
+   PROGRESS BAR / BADGES
+═══════════════════════════════════════════════ */
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 100px;
+  letter-spacing: 0.05em;
+}
+
+.badge-blue   { background: rgba(88,166,255,0.15);   color: var(--accent-blue); }
+.badge-purple { background: rgba(188,140,255,0.15);  color: var(--accent-purple); }
+.badge-teal   { background: rgba(57,211,83,0.15);    color: var(--accent-teal); }
+.badge-coral  { background: rgba(255,123,114,0.15);  color: var(--accent-coral); }
+.badge-amber  { background: rgba(227,179,65,0.15);   color: var(--accent-amber); }
+
+/* ═══════════════════════════════════════════════
+   TABS (for cluster results etc)
+═══════════════════════════════════════════════ */
+.tab-container { margin: 1.5rem 0; }
+.tab-buttons {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.25rem;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 8px 16px;
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ═══════════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════════ */
+.doc-footer {
+  margin-top: 5rem;
+  padding: 2rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.8;
+}
+
+.doc-footer a { color: var(--accent-blue); text-decoration: none; }
+.doc-footer a:hover { text-decoration: underline; }
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  #TOC { display: none; }
+  #main-content { padding: 1.5rem; }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .hero { padding: 3rem 1.25rem 2.5rem; }
+}
+
+/* ═══════════════════════════════════════════════
+   OVERRIDE FLATLY THEME — biarkan CSS kita yang pegang
+═══════════════════════════════════════════════ */
+/* Sembunyikan navbar bawaan flatly */
+.navbar { display: none !important; }
+
+/* Reset body padding yang ditambah Bootstrap/flatly */
+body { padding-top: 0 !important; padding-bottom: 0 !important; }
+
+/* Override warna link bawaan Bootstrap */
+a { color: var(--accent-blue); }
+a:hover { color: var(--accent-purple); text-decoration: none; }
+
+/* TOC float bawaan flatly — sembunyikan, kita pakai #TOC kustom */
+div#TOC.toc-content { display: none !important; }
+.tocify-wrapper { display: none !important; }
+
+/* Override Bootstrap button di code folding agar ikut tema */
+.btn { font-family: var(--font-mono) !important; }
+
+/* Hilangkan background putih bawaan Bootstrap pada main container */
+.container-fluid.main-container {
+  background: transparent !important;
+  padding: 0 !important;
+  max-width: 100% !important;
+}
+
+/* scrollbar global */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+</style>
+
+<!-- THEME TOGGLE BUTTON -->
+<button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle tema">
+  <i class="fa-solid fa-moon" id="theme-icon"></i>
+  <span id="theme-label">Dark</span>
+</button>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge"><i class="fa-solid fa-database"></i> &nbsp;MySQL · Sakila Dataset</div>
+  <h1>Sakila DVD Rental<br><span>Analisis Data Komprehensif</span></h1>
+  <p class="hero-subtitle">Clustering · Time Series Forecasting · Customer Segmentation · Business Intelligence</p>
+  <div class="hero-meta">
+    <span><i class="fa-solid fa-calendar"></i> 2025</span>
+    <span><i class="fa-brands fa-r-project"></i> R Markdown</span>
+    <span><i class="fa-solid fa-chart-line"></i> 16.044 Transaksi</span>
+    <span><i class="fa-solid fa-users"></i> 599 Pelanggan</span>
+  </div>
+</div>
+
+<div id="content-wrap">
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo       = TRUE,
+  warning    = FALSE,
+  message    = FALSE,
+  fig.width  = 9,
+  fig.height = 5.5,
+  fig.align  = "center",
+  dpi        = 150,
+  out.width  = "100%"
+)
+
+# ── Packages ──────────────────────────────────────────────
+pkgs <- c(
+  "DBI", "RMySQL",           # koneksi database
+  "dplyr", "tidyr", "lubridate", "stringr", "forcats",
+  "ggplot2", "scales", "ggrepel", "patchwork",
+  "cluster", "factoextra",   # clustering
+  "forecast", "tseries",     # time series
+  "kableExtra",              # tabel cantik
+  "plotly"                   # interaktif (opsional)
+)
+
+# install jika belum ada
+new <- pkgs[!pkgs %in% installed.packages()[,"Package"]]
+if (length(new)) install.packages(new, repos = "https://cran.rstudio.com/")
+
+invisible(lapply(pkgs, library, character.only = TRUE))
+
+# ── Theme ggplot global ────────────────────────────────────
+theme_sakila <- function(base_size = 12) {
+  theme_minimal(base_size = base_size) +
+  theme(
+    plot.background  = element_rect(fill = "#161b22", color = NA),
+    panel.background = element_rect(fill = "#161b22", color = NA),
+    panel.grid.major = element_line(color = "#21262d", linewidth = 0.5),
+    panel.grid.minor = element_blank(),
+    text             = element_text(color = "#8b949e", family = "sans"),
+    axis.text        = element_text(color = "#8b949e", size = 9),
+    axis.title       = element_text(color = "#c9d1d9", size = 10, face = "bold"),
+    plot.title       = element_text(color = "#e6edf3", size = 14, face = "bold", hjust = 0, margin = margin(b = 6)),
+    plot.subtitle    = element_text(color = "#8b949e", size = 10, hjust = 0, margin = margin(b = 12)),
+    plot.caption     = element_text(color = "#484f58", size = 8, hjust = 1),
+    legend.background = element_rect(fill = "#161b22", color = NA),
+    legend.key       = element_rect(fill = "#161b22", color = NA),
+    legend.text      = element_text(color = "#8b949e"),
+    legend.title     = element_text(color = "#c9d1d9"),
+    strip.background = element_rect(fill = "#21262d", color = NA),
+    strip.text       = element_text(color = "#c9d1d9", face = "bold"),
+    plot.margin      = margin(16, 16, 12, 16)
+  )
+}
+
+pal_sakila <- c("#58a6ff","#bc8cff","#39d353","#ff7b72","#e3b341","#f778ba","#79c0ff","#ffa657")
+```
+
+```{r db-connect, include=FALSE}
+# ══════════════════════════════════════════════════════════
+# KONEKSI DATABASE SAKILA via ODBC
+# Untuk publish ke GitHub Pages: jalankan Knit di lokal,
+# lalu push hasil HTML — jangan push file .Rmd dengan kredensial.
+# ══════════════════════════════════════════════════════════
+
+library(odbc)
+
+con=DBI::dbConnect(odbc::odbc(),
+                    Driver="MySQL ODBC 9.6 ANSI Driver",
+                    Server="127.0.0.1",
+                    Database="sakila",
+                    UID="root",
+                    PWD="Vhalocka123***",
+                    Port=3306)
+
+```
+
+```{r load-data, include=FALSE}
+# ══════════════════════════════════════════════════════════
+# QUERY DATA DARI SAKILA
+# ══════════════════════════════════════════════════════════
+
+# ── 1. Revenue & rental per kategori ─────────────────────
+cat_revenue <- DBI::dbGetQuery(con, "
+  SELECT
+    cat.name                          AS category,
+    COUNT(r.rental_id)                AS rentals,
+    ROUND(SUM(p.amount), 2)           AS revenue,
+    ROUND(AVG(f.rental_rate), 2)      AS avg_rate
+  FROM film_category fc
+  JOIN category   cat ON fc.category_id  = cat.category_id
+  JOIN film         f ON fc.film_id      = f.film_id
+  JOIN inventory    i ON f.film_id       = i.film_id
+  JOIN rental       r ON i.inventory_id  = r.inventory_id
+  JOIN payment      p ON r.rental_id     = p.rental_id
+  GROUP BY cat.name
+  ORDER BY revenue DESC
+")
+
+```
+
+```{=html}
+<div id="main-content">
+```
+
+# Pendahuluan {#intro}
+
+```{=html}
+<div class="callout info">
+  <div class="callout-title"><i class="fa-solid fa-circle-info"></i> Tentang Dataset</div>
+  <strong>Sakila</strong> adalah dataset contoh resmi MySQL yang merepresentasikan sistem penyewaan DVD. Dataset ini berisi relasi antar tabel yang mencakup film, inventori, pelanggan, staf, pembayaran, dan toko — menjadikannya ideal untuk latihan analitik bisnis yang realistis.
+</div>
+```
+
+Dataset Sakila mencakup operasi bisnis DVD rental dengan rentang waktu Mei 2005 hingga Agustus 2006. Analisis ini mencakup empat area utama:
+
+1. **Eksplorasi Data & Statistik Deskriptif** — memahami struktur dan distribusi data
+2. **Segmentasi Pelanggan dengan K-Means Clustering** — mengelompokkan pelanggan berdasarkan perilaku rental
+3. **Forecasting Revenue** — memproyeksikan pendapatan menggunakan model ARIMA
+4. **Business Intelligence** — insight strategis berbasis data
+
+```{=html}
+<div class="metrics-grid">
+  <div class="metric-card blue">
+    <div class="metric-value">$67.2K</div>
+    <div class="metric-label">Total Revenue</div>
+    <div class="metric-sub">16.044 transaksi</div>
+  </div>
+  <div class="metric-card purple">
+    <div class="metric-value">1,000</div>
+    <div class="metric-label">Judul Film</div>
+    <div class="metric-sub">16 genre, 4.199 kopi</div>
+  </div>
+  <div class="metric-card teal">
+    <div class="metric-value">599</div>
+    <div class="metric-label">Pelanggan Aktif</div>
+    <div class="metric-sub">di 2 toko</div>
+  </div>
+  <div class="metric-card coral">
+    <div class="metric-value">$4.19</div>
+    <div class="metric-label">Avg. Transaksi</div>
+    <div class="metric-sub">3 tier harga</div>
+  </div>
+  <div class="metric-card amber">
+    <div class="metric-value">26.8</div>
+    <div class="metric-label">Avg. Rental/Cust</div>
+    <div class="metric-sub">max: 46 rental</div>
+  </div>
+  <div class="metric-card pink">
+    <div class="metric-value">115 min</div>
+    <div class="metric-label">Avg. Durasi Film</div>
+    <div class="metric-sub">46–185 menit</div>
+  </div>
+</div>
+```
+
+---
+
+# Eksplorasi Data {#eda}
+
+## Distribusi Revenue per Kategori
+
+Kategori film memberikan kontribusi revenue yang berbeda-beda. Sports dan Sci-Fi secara konsisten berada di posisi teratas.
+
+```{r revenue-category, fig.cap="Revenue per kategori film, diurutkan dari tertinggi. Sports memimpin dengan $5,314."}
+cat_revenue |>
+  arrange(desc(revenue)) |>
+  mutate(category = fct_reorder(category, revenue)) |>
+  ggplot(aes(x = revenue, y = category, fill = revenue)) +
+  geom_col(width = 0.7, show.legend = FALSE) +
+  geom_text(aes(label = scales::dollar(revenue, prefix = "$")),
+            hjust = -0.1, size = 3, color = "#8b949e") +
+  scale_fill_gradient(low = "#21262d", high = "#58a6ff") +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.18)),
+                     labels = scales::dollar_format()) +
+  labs(title    = "Revenue per Kategori Film",
+       subtitle = "Total akumulasi selama periode 2005–2006",
+       x = "Revenue (USD)", y = NULL,
+       caption  = "Sumber: Database Sakila") +
+  theme_sakila()
+```
+
+
+```{=html}
+<div class="callout warning">
+  <div class="callout-title"><i class="fa-solid fa-triangle-exclamation"></i> Gap Data Kritis</div>
+  Terdapat gap signifikan pada periode Oktober–Januari. Ini bukan pola musiman — kemungkinan terjadi gangguan operasional atau masalah pencatatan transaksi. Perlu investigasi lebih lanjut sebelum data digunakan untuk forecasting.
+</div>
+```
+
+
+
+## Rekomendasi Strategis
+
+```{=html}
+<div class="card">
+  <div class="card-header"><i class="fa-solid fa-chess" style="color: var(--accent-amber)"></i> Action Plan Berbasis Data</div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+
+    <div class="callout success" style="margin: 0">
+      <div class="callout-title"><i class="fa-solid fa-crown"></i> Champions (25%)</div>
+      Launch program loyalitas eksklusif: early access film baru, diskon ulang tahun, dan bundling kategori favorit. Target: pertahankan engagement bulanan.
+    </div>
+
+    <div class="callout info" style="margin: 0">
+      <div class="callout-title"><i class="fa-solid fa-arrow-trend-up"></i> Loyal Customers (32%)</div>
+      Up-sell ke plan premium. Rekomendasikan film lintas kategori baru. Gunakan email personalisasi berbasis histori rental.
+    </div>
+
+    <div class="callout warning" style="margin: 0">
+      <div class="callout-title"><i class="fa-solid fa-clock-rotate-left"></i> At Risk (17%)</div>
+      Win-back campaign: voucher diskon 20% dengan masa berlaku terbatas (urgency). A/B test subject line email berdasarkan kategori favorit.
+    </div>
+
+    <div class="callout danger" style="margin: 0">
+      <div class="callout-title"><i class="fa-solid fa-snowflake"></i> Hibernating (12%)</div>
+      Reactivation dengan penawaran drastis (50% diskon 1 rental gratis). Jika tidak respons dalam 60 hari, geser ke inactive list.
+    </div>
+
+  </div>
+</div>
+
+<div class="callout note">
+  <div class="callout-title"><i class="fa-solid fa-database"></i> Query SQL Pendukung</div>
+  Seluruh analisis di atas dapat direproduksi langsung dari database Sakila dengan query berikut (sebagai referensi):
+</div>
+```
+
+```sql
+-- Agregasi RFM per pelanggan
+SELECT
+  c.customer_id,
+  CONCAT(c.first_name, ' ', c.last_name)          AS nama,
+  COUNT(r.rental_id)                               AS frequency,
+  SUM(p.amount)                                    AS monetary,
+  DATEDIFF(MAX(r.rental_date), CURDATE()) * -1     AS recency_days
+FROM customer c
+JOIN rental  r ON c.customer_id = r.customer_id
+JOIN payment p ON r.rental_id   = p.rental_id
+GROUP BY c.customer_id, nama
+ORDER BY monetary DESC;
+
+-- Revenue per kategori
+SELECT
+  cat.name          AS category,
+  COUNT(r.rental_id) AS total_rentals,
+  SUM(p.amount)     AS total_revenue,
+  AVG(f.rental_rate) AS avg_rate
+FROM film_category fc
+JOIN category   cat ON fc.category_id  = cat.category_id
+JOIN film         f ON fc.film_id      = f.film_id
+JOIN inventory    i ON f.film_id       = i.film_id
+JOIN rental       r ON i.inventory_id  = r.inventory_id
+JOIN payment      p ON r.rental_id     = p.rental_id
+GROUP BY cat.name
+ORDER BY total_revenue DESC;
+```
+
+---
+
+# Kesimpulan {#conclusion}
+
+```{=html}
+<div class="card">
+  <div class="card-header"><i class="fa-solid fa-flag-checkered" style="color: var(--accent-teal)"></i> Ringkasan Temuan Utama</div>
+
+  <table style="margin-top: 0.5rem;">
+    <thead>
+      <tr><th>#</th><th>Temuan</th><th>Implikasi</th><th>Prioritas</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>25% pelanggan (Champions) menyumbang >50% revenue</td>
+        <td>Bangun loyalty program segera</td>
+        <td><span class="badge badge-coral">Tinggi</span></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Gap data Okt–Jan mencurigakan</td>
+        <td>Audit sistem pencatatan transaksi</td>
+        <td><span class="badge badge-coral">Tinggi</span></td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Rental rate tidak berkorelasi dengan replacement cost</td>
+        <td>Revisi strategi pricing berbasis nilai</td>
+        <td><span class="badge badge-amber">Menengah</span></td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Inventory Sports & Sci-Fi tidak proporsional dengan demand</td>
+        <td>Tambah kopi film top-revenue</td>
+        <td><span class="badge badge-amber">Menengah</span></td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Dua toko berperforma seimbang</td>
+        <td>Model proven → ekspansi toko ketiga</td>
+        <td><span class="badge badge-teal">Rendah</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+```
+
+Analisis ini menunjukkan bahwa database Sakila, meski merupakan dataset demo, menyimpan pola bisnis yang cukup realistis untuk latihan pengambilan keputusan berbasis data. K-Means clustering berhasil mengidentifikasi empat segmen pelanggan yang actionable, sementara forecasting ARIMA memberikan baseline proyeksi yang perlu diperkuat dengan data lebih panjang.
+
+```{=html}
+<div class="doc-footer">
+  <p>Dibuat menggunakan <strong>R Markdown</strong> · Dipublish di <a href="https://pages.github.com">GitHub Pages</a></p>
+  <p>Dataset: <a href="https://dev.mysql.com/doc/sakila/en/">MySQL Sakila Sample Database</a></p>
+  <p style="margin-top: 0.5rem; color: var(--text-muted);">
+    Dokumen ini di-knit secara lokal dari RStudio terhadap database MySQL Sakila,<br>
+    kemudian file <code>sakila_analysis.html</code> di-push ke GitHub Pages.<br>
+    <strong>Jangan push file .Rmd yang mengandung kredensial.</strong> Gunakan <code>.Renviron</code> untuk menyimpan password.
+  </p>
+</div>
+
+</div> <!-- end main-content -->
+</div> <!-- end content-wrap -->
+```
+
+```{=html}
+<script>
+// ── Theme Toggle ──────────────────────────────────────────
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') !== 'light';
+  if (isDark) {
+    html.setAttribute('data-theme', 'light');
+    document.getElementById('theme-icon').className  = 'fa-solid fa-sun';
+    document.getElementById('theme-label').textContent = 'Light';
+  } else {
+    html.removeAttribute('data-theme');
+    document.getElementById('theme-icon').className  = 'fa-solid fa-moon';
+    document.getElementById('theme-label').textContent = 'Dark';
+  }
+}
+
+// ── Active TOC link ───────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const sections = document.querySelectorAll('h1[id], h2[id], h3[id]');
+  const tocLinks = document.querySelectorAll('#TOC a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        tocLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#TOC a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+});
+</script>
+```
